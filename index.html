@@ -587,26 +587,40 @@
     const msgs = [];
     snapshot.forEach(child => msgs.push({ id: child.key, ...child.val() }));
     msgs.slice(-100).forEach(m => {
-      const el = document.createElement('div');
-      el.className = 'msg';
-      const initial = (m.name || '?')[0].toUpperCase();
-      const time = m.timestamp ? new Date(m.timestamp).toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' }) : '';
-      el.innerHTML = `
-        <div class="msg-avatar">${initial}</div>
-        <div class="msg-content">
-          <div class="msg-header">
-            <span class="msg-name">${escHtml(m.name || '名無し')}</span>
-            <span class="msg-time">${time}</span>
-          </div>
-          <div class="msg-text">${escHtml(m.text || '')}</div>
-        </div>`;
-      container.appendChild(el);
+      try {
+        const el = document.createElement('div');
+        el.className = 'msg';
+        const nameStr = String(m.name ?? '名無し');
+        const textStr = String(m.text ?? '');
+        const initial = nameStr.length > 0 ? nameStr[0].toUpperCase() : '?';
+        let time = '';
+        if (m.timestamp) {
+          const d = new Date(Number(m.timestamp));
+          if (!isNaN(d.getTime())) {
+            time = d.toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' });
+          }
+        }
+        el.innerHTML = `
+          <div class="msg-avatar">${escHtml(initial)}</div>
+          <div class="msg-content">
+            <div class="msg-header">
+              <span class="msg-name">${escHtml(nameStr)}</span>
+              <span class="msg-time">${time}</span>
+            </div>
+            <div class="msg-text">${escHtml(textStr)}</div>
+          </div>`;
+        container.appendChild(el);
+      } catch (e) {
+        console.warn('メッセージ表示スキップ:', m, e);
+      }
     });
     container.scrollTop = container.scrollHeight;
+  }, (error) => {
+    console.error('チャット受信エラー:', error);
   });
 
   function escHtml(s) {
-    return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+    return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
   }
 
   // ===== 荒らし対策の設定 =====
